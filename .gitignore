@@ -8,3 +8,6 @@ qc/
 audio/cache/
 audio/bgm/*.wav
 public/assets/*/audio.wav
+public/assets/*/bgm.mp3
+# out/ 里只留云端的成片，本地验证帧不进 git
+out/verify/

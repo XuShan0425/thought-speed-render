@@ -1,7 +1,11 @@
 name: Render thought-speed
 
+# ─────────────────────────────────────────────────────────────────────────────
 # 项目：anything2explainer / works/thought-speed（《思维的速度》）
+# 本片模式：无配音（NO_VOICE）—— 不出人声、不出配乐；画面 + 字幕照常。
 # 手动触发：Actions -> Render thought-speed -> Run workflow（push 不自动渲染，省额度）
+# 其他云端项目的流程放各自仓库/各自 workflow 文件，不要与本文件混改。
+# ─────────────────────────────────────────────────────────────────────────────
 on:
   workflow_dispatch:
     inputs:
@@ -13,6 +17,10 @@ on:
         description: "并行渲染标签数（4 核用 3，日志报内存/进程被杀就降到 2）"
         required: true
         default: "3"
+      no_voice:
+        description: "静音成片（无配音 / 无配乐）。默认 true；设 false 才走 cloud/audio.restore.sh 还原人声与配乐"
+        type: boolean
+        default: true
 
 concurrency:
   group: render-thought-speed
@@ -22,6 +30,10 @@ jobs:
   render:
     runs-on: ubuntu-latest
     timeout-minutes: 55
+    env:
+      # 无配音是本片当前的默认模式：noVoice=true 时 Main.tsx 不挂 <Audio>，也不需要还原任何音频文件。
+      # NO_VOICE_IN 存的是布尔输入的字符串值（'true' / 'false'），给下面步骤判断用
+      NO_VOICE_IN: ${{ inputs.no_voice }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,6 +44,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Restore voice-over (无配音模式跳过)
+        if: env.NO_VOICE_IN == 'false'
+        run: bash cloud/audio.restore.sh
 
       - name: Cache Remotion browser (Chrome Headless Shell)
         uses: actions/cache@v4
@@ -45,16 +61,19 @@ jobs:
         env:
           COMPOSITION: ${{ inputs.composition || 'Video' }}
           CONCURRENCY: ${{ inputs.concurrency || '3' }}
+          # --props 走 JSON 文件：Windows/Linux 的引号转义都不可靠，Remotion 官方推荐传文件路径
+          PROPS_FILE: ${{ inputs.no_voice == false && 'cloud/props-voiced.json' || 'cloud/props-silent.json' }}
         run: |
           npx remotion render src/index.ts "$COMPOSITION" out/video.mp4 \
             --concurrency="$CONCURRENCY" \
+            --props="$PROPS_FILE" \
             --log=verbose
 
       - name: Upload MP4
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: thought-speed-${{ inputs.composition || 'Video' }}
+          name: thought-speed-${{ inputs.composition || 'Video' }}-${{ inputs.no_voice == false && 'voiced' || 'silent' }}
           path: out/video.mp4
           retention-days: 3
           if-no-files-found: warn

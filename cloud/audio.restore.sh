@@ -4,6 +4,8 @@
 # 一次性准备：按 README「素材」一节建立 Release（tag footage-v1，附 audio.wav），
 # 把下面的 URL 与 sha256 填实；workflow 在 Render 前调用本脚本补齐。
 set -euo pipefail
+# 无配音模式（workflow 输入 no_voice=true，默认）：人声与配乐都不需要，直接退出。
+if [ "${NO_VOICE_IN:-true}" != "false" ]; then echo "no-voice mode: skip audio restore"; exit 0; fi
 SLUG=thought-speed
 OUT="public/assets/$SLUG/audio.wav"
 URL="https://github.com/XuShan0425/thought-speed-render/releases/download/footage-v1/audio.wav"

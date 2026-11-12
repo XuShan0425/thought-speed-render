@@ -16,11 +16,20 @@ import {SHOTS_G8, BG_G8, FOOTAGE_G8} from './shots/G8';
 // 1280×720@30fps，帧号 N = useCurrentFrame()+1（1 起含端点）。
 // z 序（低→高）：黑底 < 幕底（config.bg：雾底 Fog + 星点 StarField，或点阵波 DotFieldBg）< 实拍 FootageTrack < 覆盖层 < 镜头 G1–G8 < 片尾压黑 < 进度条 < aboveBar 镜头 < 字幕。
 // 镜头组件不要画不透明黑底（会盖掉雾底星点）；需要纯黑处用 BG_Gn 覆写 {fog:false, stars:'none'}。
-export const Stage: React.FC<{shots: ShotDef[]; bg: BgSpec[]; footage?: FootageSpec[]; audio?: boolean}> = ({shots, bg, footage = [], audio = false}) => (
+export type StageProps = {
+  shots: ShotDef[];
+  bg: BgSpec[];
+  footage?: FootageSpec[];
+  audio?: boolean;
+  /** 无配音模式：人声与配乐都不挂，也不依赖 public/assets/<slug>/ 下的音频文件（云端默认走这条路）。 */
+  noVoice?: boolean;
+};
+
+export const Stage: React.FC<StageProps> = ({shots, bg, footage = [], audio = false, noVoice = false}) => (
   <AbsoluteFill style={{background: '#000'}}>
     <Fonts />
-    {audio ? <Audio src={staticFile(`assets/${VIDEO.slug}/audio.wav`)} /> : null}
-    {audio && VIDEO.music ? (
+    {audio && !noVoice ? <Audio src={staticFile(`assets/${VIDEO.slug}/audio.wav`)} /> : null}
+    {audio && !noVoice && VIDEO.music ? (
       <Audio src={staticFile(`assets/${VIDEO.slug}/${VIDEO.music.src}`)} volume={VIDEO.music.volume} loop />
     ) : null}
     {VIDEO.bg === 'dots' ? <DotFieldBg specs={bg} /> : <BgTrack specs={bg} />}
@@ -43,4 +52,16 @@ export const Stage: React.FC<{shots: ShotDef[]; bg: BgSpec[]; footage?: FootageS
 const SHOTS = [...SHOTS_OVERLAY, ...SHOTS_G1, ...SHOTS_G2, ...SHOTS_G3, ...SHOTS_G4, ...SHOTS_G5, ...SHOTS_G6, ...SHOTS_G7, ...SHOTS_G8, ...SHOTS_OVERLAY_TOP];
 const BG = [...BG_OVERLAY, ...BG_G1, ...BG_G2, ...BG_G3, ...BG_G4, ...BG_G5, ...BG_G6, ...BG_G7, ...BG_G8];
 const FOOTAGE = [...FOOTAGE_G1, ...FOOTAGE_G2, ...FOOTAGE_G3, ...FOOTAGE_G4, ...FOOTAGE_G5, ...FOOTAGE_G6, ...FOOTAGE_G7, ...FOOTAGE_G8];
-export const Video: React.FC = () => <Stage shots={SHOTS} bg={BG} footage={FOOTAGE} audio />;
+/**
+ * 默认值取 config.noVoice；Studio 里也能用 Input Props {"noVoice":true} 现场切静音，云端 CLI 用 --props。
+ * 无配音 = 人声、配乐都静音，也就完全不依赖 audio.wav / bgm.mp3 是否存在。
+ */
+const coerceNoVoice = (v: unknown): boolean | undefined => {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') return v === 'true' || v === '1';
+  return undefined;
+};
+
+export const Video: React.FC<{noVoice?: boolean | string}> = ({noVoice}) => (
+  <Stage shots={SHOTS} bg={BG} footage={FOOTAGE} audio noVoice={coerceNoVoice(noVoice) ?? VIDEO.noVoice} />
+);

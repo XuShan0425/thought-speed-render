@@ -31,6 +31,12 @@ export const VIDEO = {
   /** 配乐层（可选）：public/assets/<slug>/ 下的文件名 + 音量（0–1）。音量按配音为准：音乐先归一化到 -20 LUFS，0.35 约在语音下 12 dB。
    *  文件长于成片放一次；短于成片会循环（循环点在 afade 内，听不出断）。null = 无配乐。 */
   music: {src: 'bgm.mp3', volume: 0.35} as {src: string; volume: number} | null,
+  /**
+   * 无配音模式（默认 true）：成片不挂人声和配乐，只有画面、字幕、进度条。
+   * 云端渲染靠它省掉 44 MB 的 audio.wav 还原步骤，也用不到 bgm.mp3；要改成有配音把这里设 false，
+   * 并在 render.yml 里把 no_voice 输入设成 false 让 cloud/audio.restore.sh 去补音频。
+   */
+  noVoice: true,
   /** 章节英文副标（顺序对应 narration 的 CHAPTER 1..n；章节卡从第 2 章起显示；英文片可留空 '' 不渲染）。
    *  和章名一样是「说清讲什么」的标签，不是第二个创意标题；写这章的英文关键词或步骤序列（`Build · Run · Trace`）。 */
   chapterTech: ['Inner speed', 'The bottleneck', 'Lossy compression'],
