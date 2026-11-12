@@ -1,0 +1,60 @@
+name: Render thought-speed
+
+# 项目：anything2explainer / works/thought-speed（《思维的速度》）
+# 手动触发：Actions -> Render thought-speed -> Run workflow（push 不自动渲染，省额度）
+on:
+  workflow_dispatch:
+    inputs:
+      composition:
+        description: "Composition ID（Video = 成片；Overlay / G1..G8 = 预览）"
+        required: true
+        default: "Video"
+      concurrency:
+        description: "并行渲染标签数（4 核用 3，日志报内存/进程被杀就降到 2）"
+        required: true
+        default: "3"
+
+concurrency:
+  group: render-thought-speed
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Remotion browser (Chrome Headless Shell)
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.remotion
+          key: remotion-browser-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            remotion-browser-${{ runner.os }}-
+
+      - name: Render
+        env:
+          COMPOSITION: ${{ inputs.composition || 'Video' }}
+          CONCURRENCY: ${{ inputs.concurrency || '3' }}
+        run: |
+          npx remotion render src/index.ts "$COMPOSITION" out/video.mp4 \
+            --concurrency="$CONCURRENCY" \
+            --log=verbose
+
+      - name: Upload MP4
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: thought-speed-${{ inputs.composition || 'Video' }}
+          path: out/video.mp4
+          retention-days: 3
+          if-no-files-found: warn

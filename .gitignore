@@ -1,0 +1,10 @@
+node_modules/
+out/
+build*/
+renders/
+fin_frames/
+stills/
+qc/
+audio/cache/
+audio/bgm/*.wav
+public/assets/*/audio.wav
